@@ -1,4 +1,4 @@
 # myproject
-World Happiness Ranking Report (R)
-Sales Transactions Analysis (R)
+World Happiness Ranking Report (R and HTML)
+Sales Transactions Analysis (R and HTML)
 
