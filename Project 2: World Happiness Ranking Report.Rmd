@@ -1,0 +1,569 @@
+---
+title: "World Happiness Ranking Report"
+author: "MinhChau"
+output: 
+  html_document: default
+---
+
+
+```{css, echo=FALSE}
+
+.rpivotTable{ overflow-x: scroll; }
+.rpivotTable{ overflow: auto; }
+
+```
+
+```{r load-libraries, echo=FALSE}
+# predictive/prescriptive analytics
+library(lpSolve)
+library(caret)
+
+# descriptive analytics
+library(rcompanion) # required for transformTukey function
+library(rpivotTable)
+library(factoextra) # for fviz_cluster()
+library(rstatix) # for Welch ANOVA test
+
+# general use
+library(readxl)
+library(knitr)
+library(tidyverse) # contains dplyr, tidyr, ggplot2, tibble
+library(glue)
+library(e1071)
+library(dplyr)
+
+
+```
+
+### Context
+The World Happiness Report is a landmark survey of the state of global happiness. The first report was published in 2012. The report is based on statistical analyses of Gallup World Poll data which specifically monitors performance in six particular categories: gross domestic product per capita, social support, healthy life expectancy, freedom to make your own life choices, generosity of the general population, and perceptions of internal and external corruption levels.
+
+The data `HP.csv` for this question is from the 2019 report and has 156 observations on 9 variables.   
+
+- `Country`: Country
+- `Region`: Region 
+- `Score`: happiness score of the country (ranging from 0 to 10 with 10 being the happiest)
+- `Score2019`: happiness score of the country in 2019 (ranging from 0 to 10 with 10 being the happiest)
+- `Score2018`: happiness score of the country in 2018 (ranging from 0 to 10 with 10 being the happiest)
+- `GDP`: gross domestic product of the country
+- `Family`: indicator that shows family support to each citizen in the country
+- `Life.Expectancy`: shows the healthiness level of the country
+- `Freedom`:  indicator that shows the citizen freedom to choose their life path, job or etc
+- `Trust`: shows the level of trust from the citizen in the government (influenced by the corruption level and performance of the government)
+- `Generosity`: indicator that shows the generosity level of the citizen of the country
+
+The columns following the happiness score estimate the extent to which each of six factors – economic production, social support, life expectancy, freedom, absence of corruption, and generosity – contribute to making life evaluations higher in each country than they are in Dystopia, a hypothetical country that has values equal to the world’s lowest national averages for each of the six factors.
+
+```{r q2-read-dataset, echo=FALSE}
+
+HP <- read.csv("/Users/minhchau/Downloads/HP.csv")
+
+
+``` 
+
+#### 1. Frequency Distribution for Region 
+Find the region that have the most and least number of countries in the data. 
+
+```{r q2a, echo=FALSE}
+
+freq_Region <- HP %>% count(`Region`)
+kable(freq_Region, caption = "Frequency of Region")
+
+max_region <- freq_Region$Region[which.max(freq_Region$n)] 
+colors <- ifelse(names(table(HP$Region)) == max_region, "purple", "blue") 
+
+par(mar = c(5, 10, 2, 5))
+freq_Reg <- table(HP$Region)
+barReg <- barplot(freq_Reg,
+        col = colors,
+        main = "Frequency of Region",
+        xlab = "Number of Countries",
+        xlim = c(0,50),
+        border = "black",
+        las = 1,
+        cex.names = 0.7,
+        horiz = TRUE
+)
+text(freq_Reg + 2, barReg, labels = freq_Reg, col = "black", cex = 1, pos=4)
+
+```
+
+
+#### 2. Frequency Distribution for Europe and Asia 
+- i.Keep only countries that are in Europe and Asia and store them in a dataframe called `dfEA`. 
+- ii. Create a new variable in dfEA, `Region2`, which contains only the values "Asia" and "Europe".
+- iii. Plot the table and pie chart displaying the frequency (for table) and percentage (for pie chart) of countries in Europe and Asia. Give a title to the table and pie chart. 
+
+```{r q2b, echo=TRUE}
+dfEA <- HP[HP$Region %in% c("Western Europe", "Central and Eastern Europe", "Southern Asia", "Southeastern Asia","Eastern Asia"), ]
+dfEA$Region2 <- ifelse(dfEA$Region %in% c("Western Europe", "Central and Eastern Europe"), "Europe", "Asia")
+freq_Reg2 <- table(dfEA$Region2)
+print(freq_Reg2)
+pie1 <- prop.table(freq_Reg2)*100
+pie(pie1,
+    labels = paste(names(pie1), round(pie1, 1), "%"),
+    main = "Percentage of countries in Asia and Europe",
+    col = c("blue", "orange")
+    )
+
+```
+
+
+#### 3. Singapore Happiness Data (2 marks)
+(i) extract the row of data for Singapore and display it in a table. 
+(ii) find the rank of Singapore in terms of its happiness score with Rank 1 being the happiest country
+
+```{r q2c, echo=TRUE}
+singapore <- HP[HP$Country == "Singapore", ]
+HP$rank <- rank(-HP$Score, ties.method = "min")
+sgrank <- HP$rank[HP$Country == "Singapore"]
+cat("Singapore happiness ranking", sgrank, "\n")
+
+``` 
+
+
+#### 4. Happiness Ranking
+In the `HP` dataframe, create a column called `Rank` which will contain the happiness ranking for each country based on their Happiness Score where Rank will be 1 for the country with the highest score. There are no ties so the values will be from 1 to 156.
+
+Identify which are the 5 happiest countries and 5 least happiest countries. Present your answers in two separate tables: one for the 5 happiest countries and another table for 5 least happiest countries. Each table should have three columns, namely `Country`, `Rank` and `Score`. Sort the countries in decreasing score for the 5 happiest countries and in increasing score for the 5 least happy countries. (2 marks)
+
+```{r q2d, echo=TRUE}
+
+HP$Rank <- rank(-HP$Score, ties.method = "first")
+happiest <- HP[order(-HP$Score), c("Country", "Rank", "Score")][1:5, ]
+least_happy <- HP[order(HP$Score), c("Country", "Rank", "Score")][1:5, ]
+
+print(happiest)
+print(least_happy)
+```
+
+
+#### 5. Relationship between Life.Expectancy and Score
+Plot a chart to explore the linear relationship between Score and GDP, as well as between Score and Life.Expectancy. Describe your findings. (3 marks)
+
+```{r q2e, echo=TRUE}
+plot(HP$Score,
+     HP$GDP,
+     main = "Relationship between Happiness score and GDP",
+     xlab = "Score",
+     ylab = "GDP",
+     col = "blue",
+     pch = 16)
+abline(lm(GDP ~ Score, data = HP), col = "red", lwd = 2)
+plot(HP$Life.Expectancy, HP$Score, 
+     main = "Happiness Score vs Life Expectancy",
+     xlab = "Life Expectancy", 
+     ylab = "Happiness Score", 
+     col = "green", pch = 16)
+abline(lm(Score ~ Life.Expectancy, data = HP), col = "red", lwd = 2)
+
+
+```
+<p style="color:blue">
+Happiness Score vs GDP - positive correlation: higher GDP per capita generally leads to higher Happiness Score. This suggests economic prosperity contributes to happiness, but the relationship may not be perfectly linear.
+Happiness Score vs Life Expectancy - positive correlation: higher Life Expectancy is associated with higher Happiness Score. Countries with better healthcare and living conditions tend to have higher happiness levels.
+</p>
+
+### 6. Data Checking  
+- i. Check the distribution for `Score` and `Trust` by plotting a histogram, including value labels for each bar. Analize if the variables approximately normal.
+- ii. Evaluate and explain if there are any outliers for these two variables 
+Checking the data and getting it ready for further analyses. 
+```{r q2.(aa), echo=TRUE}
+#I
+H2 <- hist(HP$Score, 
+          ylim = c(0,30), 
+          xaxp = c(2,8,12),
+          labels = TRUE, 
+          main = "Distribution of Happiness Score",    
+          xlab = "Happiness Score", 
+          ylab = "Frequency",
+          col = "lightgreen",
+          cex.axis=0.8)
+H1 <- hist(HP$Trust, 
+          ylim = c(0,80), 
+          labels = TRUE, 
+          xaxp=c(0,0.5,10),
+          main = "Distribution of Trust",    
+          xlab = "Trust", 
+          ylab = "Frequency",
+          col = "lightblue",
+          cex.axis=0.8)
+shapiro.test(HP$Score)
+#W = 0.9872, p-value = 0.1633 > 0.05 => normally distributed
+
+shapiro.test(HP$Trust)
+#W = 0.8228, p-value = 1.813e-12 < 0.05 => not normally distributed
+
+#II
+bt3 <- boxplot(HP$Trust,
+        range = 3)
+bt3$out
+length(bt3$out)
+min(bt3$out)
+#no outliners
+bs3 <- boxplot(HP$Score,
+        range = 3)
+#there might be outliners
+
+```
+
+<p style="color:blue">
+From histogram, distribution look approximately normal, relatively
+symmetrical and follows a bell shaped curve.
+From histogram, Trust is not normally distributed. It has a right skewed distribution.
+=> Based on both histograms, we do not see any points that are far from the rest.Hence it does not look like there are any outliers
+
+For the boxplot
+One extreme outlier with value of 0.453 based on rules of thumb that is further than 3IQR from Q3 but this could also be due to the fact that the data is right skewed.
+No extreme outliers for score
+</p>
+
+
+
+### 7. Descriptive statistics for Happiness Score and Trust Dashboard 
+
+- i. Generate the descriptive statistics for `Score` and `Trust` in a table, including only these statistics: mean, sd, min, max, skew, kurtosis. 
+- ii. Interpret the skew and kurtosis results. Is this aligned with your observation above from the histograms?  
+
+<p style="color:red">**CODE**</p>
+```{r q2.(bb), echo=TRUE}
+dfScore <- HP %>%
+  summarise(
+    vars = "Score",
+    mean = mean(Score, na.rm = TRUE),
+    sd = sd(Score, na.rm = TRUE),
+    min = NA,
+    max = NA,
+    skew = e1071::skewness(Score, na.rm = TRUE),
+    kurtosis = e1071::kurtosis(Score, na.rm = TRUE)
+  )
+
+dfTrust <- HP %>%
+  summarise(
+    vars = "Trust",
+    mean = mean(Trust, na.rm = TRUE),
+    sd = sd(Trust, na.rm = TRUE),
+    min = min(Trust, na.rm = TRUE),
+    max = max(Trust, na.rm = TRUE),
+    skew = e1071::skewness(Trust, na.rm = TRUE),
+    kurtosis = e1071::kurtosis(Trust, na.rm = TRUE)
+  )
+
+dfST <- rbind(dfScore, dfTrust)
+kable(dfST, row.names = FALSE, digits = 2,
+      caption = "Descriptive Statistics for Score and Trust")
+
+``` 
+
+<p style="color:blue">
+Interpret Mean, sd, skew
+For Score:
+• Skewness = 0.01, which is very close to 0.
+• This indicates that the score variable is approximately symmetrical, confirming our observation from the
+histogram that it follows a bell-shaped curve.
+For Trust:
+• Skewness = 1.62, which is significantly positive.
+• This suggests that the trust variable has a right-skewed distribution, meaning there are more lower values
+with a long tail on the right.
+• This aligns with the histogram observation that trust is not normally distributed and is right-skewed.
+
+The kurtosi() function from psych calculates excess kurtosis.
+For Score:
+• Excess Kurtosis = -0.66
+• This indicates the tails are lighter than a normal distribution, and there are fewer extreme values.
+For Trust:
+• Excess Kurtosis = 2.23
+• This suggests the distribution has heavier tails than a normal distribution.
+</p>
+
+
+### 8. Score by Region Analyses Dashboard 
+Let's develop a dashboard that allows us to drill down further into the data by Region. 
+
+- i. Generate a table that displays the number of countries, mean, standard deviation, min and max for `Score` for each region. 
+- ii. Add a column to the table that shows the "Coefficient of Variation" for each region and display the data in descending order of COV. Describe findings with respect to COV   
+- iii. Plot a chart that displays and allows easy comparison of mean Score for each Region. Describe your findings 
+
+```{r q2.(cc), echo=TRUE}
+#I
+tabS <- HP %>% group_by(`Region`) %>% 
+  summarise(n(), 
+            Mean_Score = round(mean(Score), 1), 
+            SD_Score = sd(Score), 
+            min = min(Score), 
+            max = max(Score))
+kable(tabS)
+#II
+tabS %>% mutate (COV = (SD_Score/Mean_Score)*100) %>%
+arrange(desc(COV))
+
+
+```
+<p style="color:blue">
+Middle East & Northern show the greatest variability in happiness, meaning the happiness levels vary significantly among countries.
+Australia & New Zealand have the lowest COV, indicating that happiness levels are quite consistent across countries in these regions.
+
+Since we are comparing countries in different regions, their data may be on different scales.
+• Variance alone is misleading when comparing datasets with different means.
+• CV standardizes variability, making it a better metric for comparing variation across different regions.
+</p>
+
+```{r q2.(cc1), echo=TRUE}
+#III
+par(mar=c(5,7,4,2))
+bar <- as.matrix(tabS$Mean_Score)
+barplot(bar,
+        names.arg = tabS$Region,
+        beside=TRUE,
+        col= "skyblue",
+        main = "Mean Happiness Score by Regions",
+        cex.names= 0.8,
+        las = 2,
+        ylab = "Score",
+        ylim = c(0,9)
+        )
+text(x = 1.5:length(tabS$Region), 
+     y = tabS$Mean_Score, 
+     labels= round(tabS$Mean_Score,1),
+     pos = 3,  
+     cex = 0.8,
+     col = "black")
+```
+
+
+### 9. Correlation Analyses  
+Let's explore the linear relationship between `Score` and the other 6 factors.
+
+- i. Create a correlation matrix for the 7 variables of interest using corr.test
+- ii. Describe the strength, direction and significance of the linear relationship between Happiness Score and the other 6 variables. 
+
+```{r q2.(dd), echo=TRUE}
+library(psych)
+
+#I
+correlation_matrix <- corr.test(HP[3:9])
+print(correlation_matrix$r, digits = 2)
+#p value
+print(correlation_matrix$p, digits = 2)
+
+#II
+# if r > 0 (eg r= 0.850) => Strength: Strong positive relationship, Positive direction (as Factor1 increases, HappinessScore tends to increase). p <0.05 (eg: p= 0.001, so the relationship is statistically significant.
+
+#SIGNIFICANCE
+#Score vs. GDP: p-value: 8.6e-34 (≈ 0.000) => Significance: Statistically significant.
+#Score vs. Family: p-value: 1.6e-31 (≈ 0.000) => Significance: Statistically significant.
+#Score vs. Life.Expectancy: p-value: 7.2e-32 (≈ 0.000) => Significance: Statistically significant.
+#Score vs. Freedom: p-value: 1.9e-13 (≈ 0.000) => Significance: Statistically significant.
+#Score vs. Trust: p-value: 7.3e-06 (≈ 0.000) => Significance: Statistically significant.
+#Score vs. Generosity: p-value: 1.00000 => Significance: Not statistically significant.
+ 
+#STRENGTH & DIRECTION
+#Score vs. GDP: Correlation (r): 0.794 => Strength: Strong positive relationship.Direction: Positive (as GDP increases, Score tends to increase).
+#Score vs. Family: (r): 0.777 => Strong positive relationship. Positive Direction (as Family increases, Score tends to increase).
+#Score vs. Life.Expectancy: (r): 0.780 => Strong positive relationship. Positive Direction (as Life.Expectancy increases, Score tends to increase).
+#Score vs. Freedom: (r): 0.567 => Moderate positive relationship. Positive Direction (as Freedom increases, Score tends to increase).
+#Score vs. Trust (r): 0.386 => Weak positive relationship.Positive Direction (as Trust increases, Score tends to increase slightly).
+#Score vs. Generosity (r): 0.076 => Very weak or negligible relationship.Positive Direction (as Generosity increases, Score tends to increase very slightly).
+
+```
+
+<p style="color:blue">
+
+If r > 0 (eg r= 0.850) => Strength: Strong positive relationship, Positive direction (as Factor1 increases, HappinessScore tends to increase). p <0.05 (eg: p= 0.001, so the relationship is statistically significant.
+
+We observe a strong positive correlation between Happiness Score
+and GDP. With a p-value smaller than 0.05, this correlation is statistically significant (significantly different from 0)
+GDP
+• Correlation: 0.79 (strong positive correlation)
+• Significance: p = 0.00 (highly significant)
+Freedom
+Correlation: 0.57 (moderate positive correlation)
+• Significance: p = 0.00 (highly significant)
+Generosity
+• Correlation: 0.08 (weak positive correlation)
+• Significance: p = 0.35 (not significant)
+...
+
+STRENGTH & DIRECTION
+- Score vs. GDP: Correlation (r): 0.794 => Strength: Strong positive relationship.Direction: Positive (as GDP increases, Score tends to increase).
+- Score vs. Family: (r): 0.777 => Strong positive relationship. Positive Direction (as Family increases, Score tends to increase).
+</p>
+
+
+### 10.Computing Proportions and Probabilities for Sub-Saharan Africa region
+- i. What proportion of countries have a happiness score that is lower than the average score in the region?  
+- ii. Assuming the Score data is normally distributed, what is the probability of a country having a Score more than 5?   
+
+```{r q2.(ee), echo=TRUE}
+#i
+dfa <- HP[HP$Region == "Sub-Saharan Africa", ]
+avgscore <- mean(dfa$Score)
+P1 <- dfa %>% filter(Score<avgscore)
+proportion <- nrow(P1)/nrow(dfa)
+#ANSWER: the proportion of countries have a happiness score that is lower than the average score in the region is 41,46%
+#ii
+sd_score <- sd(dfa$Score)
+z_score <- (5 - avgscore) / sd_score
+probability <- 1 - pnorm(z_score)
+probability
+#ANSWER: the probability of a country having a Score more than 5 is 16,97%
+
+```
+
+<p style="color:blue">
+Can use : pnorm(5,mean=mScore, sd(HPssa$Score),lower.tail = F)
+- pnorm(quantile, mean, sd) : Find probability from quantile
+- qnorm(probability, mean, sd):Find quantile from probability
+
+</p>
+
+```{r q2-read, echo=FALSE}
+# import dataset into RStudio
+getwd()
+d2 <- read.csv("/Users/minhchau/Downloads/HP1819.csv")
+head(d2)
+```
+### 11.Comparing Average Score in 2019 across Regions
+(i) Create a new categorical variable `Region2` to contain 4 possible values (Africa, American, Asia, Europe). `Region2` should be assigned the value of "Asia" if `Region` is "Australia and New Zealand" or contains "Asia".
+`Region2` should be assigned the value of "Europe" if `Region` contains "Europe". `Region2` should be assigned the value of "America" if `Region` contains "America" and `Region2` should be assigned the value of "Africa" if `Region` contains "Africa". 
+(ii) Display the mean, standard deviation, min and max of score in 2019 for each of the 4 regions (defined by `Region2`) in a table. Describe any interesting patterns/observations you can make from the table.  
+(iii) Now, conduct the appropriate test(s) to assess if there is any difference in mean 2019 score across regions (as defined by `Region2`. State your hypotheses clearly, ensuring all symbols and groups are defined. Describe your conclusion with reference to the results. You may assume score to be normally distributed. 
+
+<p style="color:red">**CODE**</p>
+```{r q2.(a/), echo=TRUE}
+#i
+dregion <- d2 %>% mutate(Region2 = case_when(
+  Region == "Australia and New Zealand" ~ "Asia",
+  grepl("Asia", Region) ~ "Asia",
+  grepl("Europe", Region) ~ "Europe",
+  grepl("America", Region) ~ "America",
+  grepl("Africa", Region) ~ "Africa",
+))
+
+#ii
+tabs <- dregion %>% group_by(`Region2`) %>% 
+  summarise(n(), 
+            Mean_Score = round(mean(Score.2019), 1), 
+            SD_Score = sd(Score.2019), 
+            min = min(Score.2019), 
+            max = max(Score.2019))
+kable(tabs)
+
+
+#iii
+
+anova_result <- aov(Score.2019 ~ Region2, data = dregion)
+anova_summary <- summary(anova_result)
+anova_summary
+
+```
+<p style="color:blue">
+
+II. 
+Higher Mean in Europe & America => these regions have better performance.
+High Standard Deviation in Africa and Asia => This indicates large variations in scores. Low SD score in America and Europe => scores in these regions are more consistent
+Africa has the lowest min score, it means disparities.
+
+III. Hypotheses 
+Let M1, M2, M3, M4 be the median Score_2019 for Asia, America, Europe, and Africa.
+Null Hypothesis (H0): There is no significant difference in Score_2019 across regions.
+H0: M1=M2=M3=M4
+Alternative Hypothesis (H1): At least one region has a significantly different median score.
+H1:At least one M is different
+As p_value =  8.9e-15 < 0.05, we reject the null hypothesis H0. This means there is a significant difference in mean Score.2019 across regions (Region2).
+
+</p>
+
+
+### 12. Score in 2018 and 2019 
+Conduct the appropriate test to evaluate if there is any significant change in countries' happiness scores from 2018 to 2019. State your hypotheses clearly, ensuring all symbols and groups are defined. Describe your conclusion with reference to the results. You may assume score to be normally distributed. 
+
+<p style="color:blue">
+Hypotheses 
+Let Md be the mean difference in happiness scores between 2018 and 2019.
+Null Hypothesis (H0): There is no significant change in happiness scores from 2018 to 2019, i.e., the mean difference is zero. H0: Md = 0
+Alternative Hypothesis (H1): There is a significant change in happiness scores from 2018 to 2019, i.e., the mean difference is not zero.
+H1: Md =/ 0
+</p>
+
+
+<p style="color:red">**CODE**</p>
+```{r q2.(b/), echo=TRUE}
+
+
+d3 <- d2 %>% select(Country, Score.2019, Score.2018)
+t_test_result <- t.test(d3$Score.2019, d3$Score.2018, paired = TRUE)
+print(t_test_result)
+```
+#As p value > 0.05 → Fail to reject H0 =>  There is no significant change in happiness scores from 2018 to 2019.
+
+
+### 13. 2019 Score in Europe  
+Focusing only on countries in Europe, conduct the appropriate test to evaluate if average happiness scores in 2019 is the same for countries in "Western Europe" and those in "Central and Eastern Europe". State your hypotheses clearly, ensuring all symbols and groups are defined. Describe your conclusion with reference to the results. You may assume score to be normally distributed.
+
+<p style="color:blue">
+Hypotheses 
+Let M1 represent the mean happiness score for countries in Western Europe in 2019, and M2 represent the mean happiness score for countries in Central and Eastern Europe in 2019.
+Null Hypothesis (H0): There is no significant difference in the average happiness scores between Western Europe and Central and Eastern Europe => H0: M1 = M2
+Alternative Hypothesis (H1): There is a significant difference in the average happiness scores between Western Europe and Central and Eastern Europe => H1: M1 =/ M2
+</p>
+
+<p style="color:red">**CODE**</p>
+```{r q2.(c/), echo=TRUE}
+d4 <- d2 %>% filter(Region %in% c("Western Europe", "Central and Eastern Europe"))
+
+t_test_result <- t.test(Score.2019 ~ Region, data = d4)
+print(t_test_result)
+
+```
+
+#As p value < 0.05 → strong evidence to reject H0 =>  There is no significant difference in the average happiness scores between Western Europe and Central and Eastern Europe.
+
+
+### 14. 2019 Scores in Asia  
+Let's narrow down our analyses to the countries in Asia (Defined by Region2). Assuming that these countries are a sample of countries in whole of Asia,  
+
+(i) compute the 95% confidence interval for the average score in 2019 for countries in Asia. 
+(ii) compute the 99% confidence interval for proportion of countries with 2019 score exceeding 5.5. 
+(iii) compute the 90% prediction interval for score in 2019. 
+
+Describe briefly what each of the above interval estimates tell us? From your result, could you conclude that true mean happiness score for countries in Asia is 5.5? 
+
+<p style="color:red">**CODE**</p>
+```{r q2.(d/), echo=TRUE}
+#i
+asia_data <- dregion %>% filter(Region2 == "Asia")
+meanA <- mean(asia_data$Score.2019, na.rm = TRUE)
+sdA <- sd(asia_data$Score.2019, na.rm = TRUE)
+n <- nrow(asia_data)
+t_value <- qt(0.025, df = n - 1)  
+lower_bound <- meanA + (t_value * sdA * sqrt(1 + 1/n))
+upper_bound <- meanA - (t_value * sdA * sqrt(1 + 1/n))
+cbind(lower_bound, upper_bound)
+
+# we 95% confident that the true average happiness score in 2019 for all countries in Asia falls within the range of 3.32 to 7.33.
+
+#ii
+asia_data <- dregion %>% filter(Score.2019 > 5.5)
+pd1 <- nrow(asia_data) / nrow(d2)
+lcipd1 <- pd1 + (qnorm(0.005)*sqrt(pd1*(1-pd1)/nrow(d2)))
+ucipd1 <- pd1 - (qnorm(0.005)*sqrt(pd1*(1-pd1)/nrow(d2)))
+print(cbind(lcipd1, ucipd1), digits=3)
+# we are 99% confident that the true proportion of countries in the dataset with a 2019 score exceeding 5.5 lies between 36.5% and 57.1%.
+
+#iii
+mnscr <- mean(d2$Score.2019)
+sdscr <- sd(d2$Score.2019)
+n <- nrow(d2)
+t_value <- qt(0.05, df = n - 1) 
+lpi_scr <- mnscr + (t_value * sdscr * sqrt(1 + 1/n))
+upi_scr <- mnscr - (t_value * sdscr * sqrt(1 + 1/n))
+cbind(lpi_scr, upi_scr)
+```
+
+<p style="color:blue">
+We are 90% confident that the next individual country selected from the same population will have a 2019 score within the range of 3.559 to 7.255.
+
+Based on 95% Confidence Interval for Mean, 99% Confidence Interval for Proportion, 90% Prediction Interval =>  we cannot reject the possibility that the true mean happiness score for countries in Asia is 5.5. However, we can say that 5.5 is a plausible value for the true mean 
+=> we cannot conclusively state that the true mean happiness score for countries in Asia is exactly 5.5, but we can’t rule it out either, as 5.5 falls within the 95% confidence interval.
+</p>
