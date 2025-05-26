@@ -1,0 +1,400 @@
+---
+title: 'Sales Transactions Analysis'
+author: "MinhChau"
+output: html_document
+---
+```{r load-libraries, echo=FALSE}
+# predictive/prescriptive analytics
+library(lpSolve)
+library(stats)
+library(caret)
+
+# descriptive analytics
+library(rcompanion) # required for transformTukey function
+library(rpivotTable)
+library(car) # for linearHypothesis()
+library(factoextra) # for fviz_cluster()
+library(rstatix) # for Welch ANOVA test
+library(psych) # for pairs.panels()
+
+# general use
+library(readxl)
+library(wooldridge)
+library(knitr)
+library(tidyverse) # contains dplyr, tidyr, ggplot2, tibble
+library(glue)
+library(e1071)
+
+
+```
+- Dataset required: `Sales Transactions.xlsx`
+
+`Sales Transactions.xlsx` contains the records of all sale transactions for a day, July 14. Each of the column is defined as follows:
+
+- `CustID` :  Unique identifier for a customer
+- `Region`: Region  of customer's home address 
+- `Payment`: Mode of payment used for the sales transaction
+- `Transction Code`: Numerical code for the sales transaction
+- `Source`: Source of the sales (whether it is through the Web or email)
+- `Amount`: Sales amount
+- `Product`: Product bought by customer
+- `Time Of Day`: Time in which the sale transaction took place. 
+
+```{r q1-read-dataset, echo=TRUE}
+#put in your working directory folder pathname ()
+#import excel file into RStudio
+ST <- read_excel("/Users/minhchau/Downloads/Sales Transactions.xlsx", col_types = c("numeric", "text", "text", "numeric", "text", "numeric", "text", "date"), skip = 2)
+head(ST)
+```
+
+### 1. Frequency distribution of Customer Profiles 
+The manager would like to have a better understanding of the customer profiles. He would like the customer dashboard to display the following:
+
+- i. frequency distribution for the regions the customers are from
+- ii. frequency distribution for the payment mode used by the customers
+
+He would like you to use shades of blue for the charts. He would also like to have your interpretation of the tables and charts generated. Write your observation in the space below. 
+
+```{r 1a-sale, echo=FALSE}
+#I
+
+Freq.reg <- ST %>% count(Region)
+
+kable(Freq.reg, caption = "Frequency of Customers by Region")
+
+# Prepare data for pie chart
+slice.reg <- Freq.reg$n
+reg.piepercent <- 100 * round(Freq.reg$n / sum(Freq.reg$n), 2)
+
+label <- Freq.reg$Region
+label <- paste(label, ",", sep = "")
+label <- paste(label, reg.piepercent)
+label <- paste(label, "%", sep = "")
+
+# Create pie chart
+pie(
+  slice.reg,
+  labels = label,
+  col = c("blue", "cyan", "dodgerblue", "skyblue"),
+  radius = 1,
+  main = "Frequency of Customers by Regions"
+)
+
+#II
+# Barchart for Payment (Pie chart is also appropriate. Here we provide an eg of each.)
+Freq.pay <- ST %>% count(`Payment`)
+kable(Freq.pay, caption = "Frequency of Customers for each payment mode")
+
+slice.pay <- Freq.pay$n
+pay.piepercent <- round(100*slice.pay/sum(slice.pay), 2)
+label <- Freq.pay$Payment
+label <- paste(label, ",", sep = "")
+label <- paste(label, pay.piepercent) #default of sep=" "
+label <- paste(label, "%", sep = "")
+pie(slice.pay, labels = label, col = c("blue", "skyblue"), radius = 1, main = "Frequency of orders by Payment Mode")
+
+# Another way to create the bar chart using ggplot2
+library(ggplot2)
+
+ggplot(ST, aes(x = `Payment`)) +
+  geom_bar() +
+  labs(title = "Frequency of Customers for each payment mode",
+       x = "Payment Mode",
+       y = "Frequency of Customers")
+
+# Base R plot
+bp <- barplot(Freq.pay$n,
+              ylab = "Frequency of Customers",
+              ylim = c(0, 300),
+              names.arg = Freq.pay$`Payment`,
+              xlab = "Payment Mode",
+              main = "Frequency of Customers for each payment mode",
+              col = "blue")
+# If label is required for the bars
+text(bp, 0, Freq.pay$n, pos = 3)
+
+```
+
+### 2. Sales Transaction Analyses Dashboard 
+The manager would also like to have a dashboard to be able to visualize the sales `Amount` data better. 
+
+- i. First, generate the descriptive statistics for `Amount` in a table. The manager would like to include only these statistics: n (or number of observations), mean, sd, median, skew, kurtosis. (Discuss what these statistics tell you about the distribution of `Amount`. Is it normally distributed?)
+- ii. Plot the histogram, density plot and normal Q-Q plot for `Amount`. Then conduct the appropriate goodness of fit test to confirm if the variable is normally distributed. [Note: Typically you can choose which plot to plot that will enable you to make a better judgement]
+- iii. The manager is concerned about potential outliers in the data. Can you help to identify if any outliers for `Amount` exists? 
+- iv. The manager suspects that the sales `Amount` may differ for transactions involving `Book` versus `DVD`. Could you generate the table and chart for him to be able to compare the mean and standard deviations of `Amount` for books versus dvds? Describe what you can observe from the chart. 
+- v. Perform the outlier analyses separately for books and dvds. What observations can you make now? Would you remove any of the outliers or keep them? How would you handle these outliers?  
+
+<p style="color:red">**CODE**</p>
+```{r Q.1b, echo=FALSE}
+#I: Descriptive stats for Amount
+tab.lb <- describe(ST$Amount)
+tab.lb$range <- tab.lb$trimmed <- tab.lb$mad <- tab.lb$se <- tab.lb$min <- tab.lb$max <- NULL # Remove columns not needed
+tab.lb <- tab.lb[1,] # Select only the first row
+kable(tab.lb, row.names = FALSE, caption = "Descriptive Statistics for Amount")
+
+# Alternative: explicitly name package that function is from:  tab.lb <- psych::describe(ST$Amount)
+ST %>% summarize(
+  vars="Amount",
+  n=n(),
+  mean=mean(Amount),
+  sd=sd(Amount),
+  median=median(Amount),
+  skew=skew(Amount),
+  kurtosis=kurtosi(Amount)
+) %>%
+kable(row.names=FALSE, digits=2, caption = "Description Statistics for Amount")
+
+# II: Histogram
+H <- hist(ST$Amount, ylim=c(0,250), labels = TRUE, xaxp= c(0,260,13) , cex.axis = 0.8)
+
+# Density Plot
+plot(density(ST$Amount), main="Density plot for 'Amount'")
+
+# QQ Plot
+qqnorm(ST$Amount)
+qqline(ST$Amount, col= 2)
+
+# Normality Test (Shapiro-Wilk Test)
+shapiro.test(ST$Amount)
+
+#III. Outliner
+#We can use visual aids e.g. box plots to help identify possible outliers. Outlier analyses can be done in a few ways: 1. Visualinspection, 2. Boxplots(identifiesmild(1.5to3timesIQRfromQ1andQ3)andextremeoutliers(3 times IQR from Q1 and Q3), 3. Z-scores>+3or<-3(fornormallydistributeddata). When data is skewed, it’s best to use visual inspection with charts such as histograms for outlier identification.
+boxplot(ST$Amount,
+        range = 1.5,
+        horizontal = TRUE,
+        main = "Boxplot for 'Amount' with range of 1.5"
+)
+
+boxplot(ST$Amount,
+        range = 3,
+        horizontal = TRUE,
+        main = "Boxplot for 'Amount' with range of 3"
+)
+
+#IV. Mean and Std Deviation of Books & DVDS
+tab.lb2 <- ST %>% group_by(`Product`) %>% summarise(mean=mean(Amount), SD=sd(Amount))
+kable(tab.lb2)
+
+ #plot grouped barplot
+par(mar=c(5,10,4,2)) # default plot margin is (5,4,4,2); consider a bigger left margin
+bar.lb2 <- as.matrix(tab.lb2[,c(2:3)])
+col.lb2 <- c("pink", "plum1")
+barplot(bar.lb2,
+        beside = TRUE,
+        col = col.lb2,
+        main = "Mean and Std Deviation of `Amount` across Products",
+        cex.names = 0.9,
+        las = 1,
+        ylab = "Amount",
+        horiz = FALSE # Set to FALSE for vertical bar plot
+)
+legend("topright",
+       cex = 0.7,
+       fill = col.lb2,
+       legend = colnames(bar.lb2)) # Use column names as legend
+mtext(text = unique(tab.lb2$`Product`), side = 2, at = seq(1.5, ncol(bar.lb2)*3-1.5, by = 3), las = 2, cex = 0.8) # Add product names to y-axis
+
+
+#V. Outliners analyses
+tab.books <- ST %>% filter(Product=="Book")
+tab.DVD <- ST %>% filter(Product=="DVD")
+
+par(mar=c(5,4,4,2))
+
+hist(tab.books$Amount,
+     xlab = "Amount",
+     ylab = "Frequency",
+     xaxp = c(0, 260, 13),
+     main = "Histogram for Books",
+     cex.axis = 0.8
+)
+
+hist(tab.DVD$Amount,
+     xlab = "Amount",
+     ylab = "Frequency",
+     main = "Histogram for DVD",
+     xaxp = c(15, 25, 10)
+)
+
+```
+
+<p style="color:blue">
+From the histograms, we can see that there are still two groups in the Books data but there isn't for DVD data. So we can conclude that there are no outliers for DVD data.
+• In the case of books, there are quite a number of sales with higher sales amount. Therefore, we may wish to find out more before just discarding this data.
+• A discussion with the bookstore manager reveals that higher sales amount is due to the sales of rare/collector item books that tend to cost more. It might be interesting to examine if there is any difference between normal vs rare/collector item books.
+• Hence to deal with "outlier" here, one way is to analyse normal books and rare/collector books separately (we could create another variable, type, to indicate the type of books). This is something that needs to be discussed with the manager.</p>
+
+### 3. Checking Correlation
+The manager would like to check if the sales `Amount` for DVD has any correlation with `Time of the Day`.
+
+- i. Plot the appropriate chart and provide the statistical measure to help the manager assess this. 
+- ii. Type your interpretation for the manager in the space below. 
+
+<p style="color:red">**CODE**</p>
+```{r Q.1c, echo=TRUE}
+#plot
+##(i)
+plot(x=tab.DVD$`Time Of Day`,
+     y=tab.DVD$Amount,
+     main="Scatter plot of Amount to Time of Day for DVD sales",
+     xlab="Time of Day",
+     ylab = "Amount")
+#Use axis.POSIXct to reformat the x axis to keep only the hours and mins.
+dvddata <- ST %>% filter(Product == "DVD")
+time <- dvddata$`Time Of Day` # you could use the original variable too
+plot(time, dvddata$Amount, xlab = "Time", ylab = "Amount", main = "Scatter plot of Amount to Time of Day for DVD sales",
+     xaxt = "n") # Suppress the x-axis
+
+# Add custom x-axis labels with only the time
+axis.POSIXct(1, at = seq(min(time), max(time), by = "hour"),
+             labels = format(seq(min(time), max(time), by = "hour"), "%H:%M"))
+
+#Stat measurement 
+cor(as.numeric(tab.DVD$`Time Of Day`), tab.DVD$Amount) 
+# need to highlight that Time of Day is not numeric data so it needs to be converted first before using the cor function
+cor.test(as.numeric(tab.DVD$`Time Of Day`), tab.DVD$Amount)
+```
+
+### 4. Computing proportions and probability
+The manager would like to use the existing data to compute the following:
+
+- i. Proportion of `Book` sales transactions that have `Amount`greater than $60.
+- ii. Proportion of `DVD` sales transactions that are from the Web.
+
+Assume that we do not have this dataset that you are working with. Instead we are told the DVD sales Amount is normally distributed with a mean of \$20 and standard deviation of \$4. What is the probability of DVD sales amount being greater than $25? 
+
+Please type your answer below.
+
+<p style="color:red">**CODE**</p>
+```{r Q.1d, echo=TRUE}
+# i. Proportion of Book sales transactions that have Amount greater than $60
+df.book <- ST %>% filter(Product =="Book")
+df.book60 <- df.book %>% filter(Amount>60)
+nrow(df.book60)/nrow(df.book)
+
+
+# ii. Proportion of DVD sales transactions that are from the Web
+df.dvd <- ST %>% filter(Product =="DVD")
+df.dvdweb <- df.dvd %>% filter(Source=="Web")
+nrow(df.dvdweb)/nrow(df.dvd)
+
+# The last line in the image seems to be unrelated to the proportions.
+# It calculates the probability of a value being greater than 25 in a normal distribution with mean 20 and standard deviation 4.
+pnorm(25, mean=20, sd=4, lower.tail = FALSE)
+```
+
+
+
+### 5. Computing Interval Estimates
+- i. compute the 99% for the mean of `Amount` for DVD sale transactions. Could the company conclude with 99% confidence level that the true mean `Amount` for DVD sale transactions is not equal to $20? 
+- ii. compute the 90% confidence interval for proportion of DVD sale transactions with sales amount being greater than \$22. Explain to the store manager what this confidence interval means.
+- iii. compute the 95% prediction interval for `Amount` for sales of DVD. Explain to the store manager what this prediction interval mean? 
+
+<p style="color:red">**CODE**</p>
+```{r q1a, echo=TRUE}
+#possibility not 20, confidence interval, cant reject 
+
+dfd <- ST %>% filter(Product == "DVD")
+uciatm99  <- mean(dfd$Amount) - qt(0.005, df=nrow(dfd) - 1)*sd(dfd$Amount)/sqrt(nrow(dfd))
+lciatm99  <- mean(dfd$Amount) + qt(0.005, df=nrow(dfd) - 1)*sd(dfd$Amount)/sqrt(nrow(dfd))
+ print(cbind(uciatm99, lciatm99), digits = 4)
+```
+
+
+<p style="color:blue">
+It is perhaps easier to understand this problem, using our intuition regarding Hypothesis Testing.
+Null Hypothesis     H0: True population mean Amount for DVD sales transactions =  $20. Alternat Hypothesis H1: True population mean Amount for DVD sales transactions != $20 (two-tailed test)
+
+1st method :
+- Generate 99% confidence interval: (19.3, 20.3)
+- Conclusion: Since $20 lies within the 99% confidence interval, we have insufficient evidence at the 99% level of confidence to reject the null hypothesis that True population mean Amount for DVD sales transactions =  $20.
+  - Note: DO NOT MENTION THAT "we accept the Null Hypothesis".
+  - We never accept the Null Hypothesis, we only: (a) reject Null Hypothesis, or (b) fail to reject Null Hypothesis.
+
+2nd method :
+- Use t-test
+- The output will include a p-value, which you compare to your significance level (α = 0.01, since we're using a 99% confidence level here).
+- Decision rule:
+  - If p-value ≤ α (0.01): We reject the null hypothesis. This means there is evidence that the population mean is significantly different from $20.
+  - If p-value > α (0.01): We fail to reject the null hypothesis. This means there is insufficient evidence to conclude that the mean is different from $20.
+</p>
+
+
+```{r q1a1, echo=TRUE}
+ 
+df22 <- ST %>% filter(Amount > 22)
+pd22 <- nrow(df22)/nrow(dfd)
+lcipd22 <- pd22 + (qnorm(0.05)*sqrt(pd22*(1-pd22)/nrow(dfd)))
+ucipd22 <- pd22 - (qnorm(0.05)*sqrt(pd22*(1-pd22)/nrow(dfd)))
+print(cbind(lcipd22, ucipd22), digits=3)
+```
+
+**The 90% confidence interval for the proportion of DVD sale transactions with an amount greater than $22 is (0.202, 0.3). This means that we are 90% confident that the true proportion of DVD transactions with sales greater than $22 lies between 0.202 and 0.3. In other words, if we were to repeatedly take samples from all DVD sales and compute the proportion, 90% of the intervals we calculate would contain the true proportion.**
+
+```{r q1a2, echo=TRUE}
+ 
+# III. compute the 95% prediction interval for `Amount` for sales of DVD. Explain to the store manager what this prediction interval mean? 
+amount_clean <- na.omit(dfd$Amount)
+amount_clean <- as.numeric(amount_clean)
+qqnorm(amount_clean, 
+       ylab = "Sample quantiles for amount for dvd orders")
+qqline(amount_clean, col="red")
+shapiro.test(amount_clean)
+dfd$Amt.t = transformTukey(amount_clean, plotit=TRUE)
+
+mnamt <- mean(dfd$Amount)
+sdamt <- sd(dfd$Amount)
+lpi.amt <- mnamt + (qt(0.025, df = (nrow(dfd)-1))*sdamt*sqrt(1+1/nrow(dfd)))
+upi.amt <- mnamt - (qt(0.025, df = (nrow(dfd)-1))*sdamt*sqrt(1+1/nrow(dfd)))
+cbind(lpi.amt, upi.amt)
+
+#The 95% prediction interval for DVD sale amounts is (14.25, 25.39). This means that for a single future DVD sale, we can be 95% confident that the sale amount will fall within this range.
+
+```
+
+### Q1.(b) Hypothesis Testing
+**The store manager would like to draw some conclusions from the sample sales transaction data. He would like to retain all the data for the analyses. Please help him to set up and test the following hypotheses.You may assume that `Amount` is normally distributed here**
+
+- i. The proportion of book sales transactions with `Amount` greater than $50 is at least 25 percent of book sales transactions.
+- ii. The mean sales amount for books is the same as for dvds. 
+- iii. The mean sales amount for CollectorBook is greater than mean sales amount for Book (ie normal or non-collector books). You may use the definition from T4 Part 1 Q1biii where the outliers identified from the boxplot of range 3 is used to indicate CollectorBook.  
+- iv. The mean sales amount for dvds is the same across all 4 regions. 
+
+
+<p style="color:red">**CODE**</p>
+```{r q1b, echo=TRUE}
+#just use p value
+#one sample test for proportion => use z statistic => calculate the proportion with Amount greater than $50 is at least 25 percent of book sales transactions.
+
+book <- ST %>%  filter(Product == "Book")
+bk50 <- book %>% filter(Amount > 50)
+pbk50 <- nrow(bk50)/nrow(book)
+
+z<- (pbk50-0.25)/sqrt(0.25*(1-0.25)/nrow(book))
+z
+
+cv95<- qnorm(0.05)
+cv95
+
+z<- cv95
+pnorm(z)
+
+#II. The mean sales amount for books is the same as for dvds
+ST$Amount <- as.numeric(as.character(ST$Amount))
+t.test(Amount ~ Product, data=ST)
+
+#III. The mean sales amount for CollectorBook is greater than mean sales amount for Book (ie normal or non-collector books). You may use the definition from T4 Part 1 Q1biii where the outliers identified from the boxplot of range 3 is used to indicate CollectorBook.  
+#book sale amount sample of hypothetical, based on existing => make conclusion about all transaction ever make 
+book$Amount <- as.numeric(as.character(book$Amount))
+boxplot.bk <- boxplot(book$Amount, horizontal = TRUE, range = 3)
+book1 <- book %>% mutate(Pdt_type = ifelse(
+  Amount %in% boxplot.bk$out, "CollectionBook", "Book"
+))
+t.test(book1$Amount~book1$Pdt_type, alternative = "less")
+
+#IV. The mean sales amount for dvds is the same across all 4 regions. 
+ST.dvd <- ST %>% filter(Product == "DVD")
+table(ST.dvd$Region)
+bartlett.test(Amount~Region, ST.dvd)
+```
+
