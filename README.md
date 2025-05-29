@@ -11,7 +11,7 @@
 * Created a regional summary dashboard including Coefficient of Variation (COV) to measure score variability
 * Extracted and analyzed Singapore’s happiness ranking and contributing factors for in-depth comparison
 
-<h2>3: Sales Transactions Data Analysis | R, Excel<h2>
+3: Sales Transactions Data Analysis | R, Excel<h2>
 
 **Analyzed customer transactions data using R to explore regional sales patterns, identify outliers, compare product performance, and test statistical hypotheses.**
 
