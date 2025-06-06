@@ -90,3 +90,51 @@
   <li>Highlighted false negative impact and suggested model refinement for improved positive class recall</li>
 </ul>
 
+<h3>8: K-Means Clustering of Whiskey Taste Profiles – R</h3>
+
+<p><strong>Applied k-means clustering to segment 86 whiskies based on 12 taste indicators.</strong></p>
+<ul>
+  <li>Used <code>whiskies.csv</code> with ratings (0–4) on Body, Sweetness, Smoky, etc.</li>
+  <li>Plotted WSS for k = 2–20 and selected k = 3 based on the elbow method.</li>
+  <li>Visualized clusters using PCA (fviz_cluster), showing clear group separation on PC1 and PC2.</li>
+  <li>Identified cluster taste profiles:
+    <ul>
+      <li><strong>Cluster 1:</strong> Bold – high in Body, Smoky, Medicinal, Tobacco.</li>
+      <li><strong>Cluster 2:</strong> Light – more Floral, Fruity, Sweet.</li>
+      <li><strong>Cluster 3:</strong> Balanced – moderate Spicy and Winey notes.</li>
+    </ul>
+  </li>
+  <li>Recommended Cluster 1 for fans of strong, smoky whiskies.</li>
+</ul>
+
+<h3>9: US Arrest Analysis with PCA and Regression – R</h3>
+
+<p><strong>Performed Principal Component Analysis on US crime data and used principal components to model GDP.</strong></p>
+<ul>
+  <li>Used <code>prcomp()</code> to conduct PCA on USArrests dataset (Murder, Assault, UrbanPop, Rape), with scaling and centering.</li>
+  <li>Retained 86.75% of the total variance using the first two components (PC1 = 62.01%, PC2 = 24.74%).</li>
+  <li>Created scree plot and biplot to visualize variance distribution and loading vectors.</li>
+  <li>Interpreted PC1 as a measure of overall crime severity; high-crime states like Florida, Nevada, and California had low PC1 scores.</li>
+  <li>Added PC1 and PC2 scores to the dataset and performed multiple linear regression using them to predict GDP.</li>
+  <li>Found both PC1 (p = 0.00652) and PC2 (p = 0.0265) to be significant predictors at the 5% level.</li>
+  <li>Demonstrated how dimensionality reduction via PCA can improve multicollinearity and interpretability in regression modeling.</li>
+</ul>
+
+<h3>10: PCA and Logistic Regression for Diabetes Prediction – R</h3>
+
+<p><strong>Used PCA and logistic regression to analyze factors influencing diabetes status in 768 patients.</strong></p>
+<ul>
+  <li>Variables included glucose, insulin, BMI, age, pregnancies, etc. from <code>diabetesdata.csv</code>.</li>
+  <li><strong>PCA:</strong> Standardized 8 predictors → 3 PCs retained (explaining >60% variance).</li>
+  <li><strong>PC1:</strong> “Risk Factor” (high BMI, glucose, insulin); <strong>PC2:</strong> “Demographic vs. Metabolic Contrast” (age & pregnancies vs. BMI & insulin).</li>
+  <li>Visualized PCA results using biplot; clusters in PC1 direction indicated higher diabetes risk.</li>
+  <li><strong>Logistic Regression:</strong> Fit model with PC1–PC3; all statistically significant (p &lt; 0.05).</li>
+  <li><strong>Stepwise Selection:</strong>
+    <ul>
+      <li><em>Backward:</em> Selected glucose, BMI, pregnancies, diabetesPF, bloodpressure, age, insulin.</li>
+      <li><em>Forward:</em> Selected same set, excluding skin thickness.</li>
+    </ul>
+  </li>
+</ul>
+
+
