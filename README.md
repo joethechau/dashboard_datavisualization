@@ -1,6 +1,6 @@
 <h1> My Project </h1>
 
-<h3>1: SQL queries for Sales Customer Product Analysis – R</h3>
+<h3>1: SQL queries for Sales Customer Product Analysis - SQL</h3>
 
 <p><strong>Built SQL solutions for customer segmentation and multi-year product analysis.</strong></p>
 <ul>
@@ -26,7 +26,7 @@
   <li>Extracted and analyzed Singapore’s happiness ranking and contributing factors for in-depth comparison</li>
 </ul>
 
-<h3>3: Sales Transactions Data Analysis | R, Excel</h3>
+<h3>3: Sales Transactions Data Analysis - R, Excel</h3>
 
 <p><strong>Analyzed customer transactions data using R to explore regional sales patterns, identify outliers, compare product performance, and test statistical hypotheses.</strong></p>
 
@@ -39,7 +39,7 @@
   <li>Evaluated business hypotheses on product performance to support data-driven retail strategies</li>
 </ul>
 
-<h3>4: Human Capital Index Hypothesis Testing</h3>
+<h3>4: Human Capital Index Hypothesis Testing - R</h3>
 
 <p><strong>Analyzed World Bank data to show that log-transformed GDP per capita significantly predicts Human Capital Index with strong model fit (Adj. R² = 0.744, p &lt; 2e-16).</strong></p>
 
@@ -51,7 +51,7 @@
   <li>Rejected null hypothesis: log(GDP) slope ≠ 0, confirming it as a significant predictor.</li>
 </ul>
 
-<h3>5: Diamond Information: Plotting and Data Transformation</h3>
+<h3>5: Diamond Information: Plotting and Data Transformation - R</h3>
 
 <p><strong>Log-transforming diamond price and carat improved regression assumptions and model fit.</strong></p>
 
@@ -63,7 +63,7 @@
   <li>Normal Q-Q plot after transformation showed residuals closer to normal distribution, indicating better model validity.</li>
 </ul>
 
-<h3>6: Housing Price Prediction Using Multiple Linear Regression</h3>
+<h3>6: Housing Price Prediction Using Multiple Linear Regression - R</h3>
 
 <p><strong>Built and validated a Boston house price model with 73.4% R² and significant predictors.</strong></p>
 
