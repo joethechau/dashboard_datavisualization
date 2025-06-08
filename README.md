@@ -5,6 +5,7 @@
 <p><strong>Designed and developed an interactive Tableau dashboard to analyze customer reviews of British Airways across multiple dimensions.</strong></p>
 
 <ul>
+  - 👉 [View the live dashboard on Tableau Public](https://public.tableau.com/app/profile/vo.ngoc.minh.chau/viz/AirplaneStatsAnalysis/Dashboard12)
   <li>Visualized average ratings by metric (e.g. Overall, Cabin Staff Service, Food, Entertainment) using a dynamic parameter selector.</li>
   <li>Tracked rating trends over time with a line chart spanning from March 2016 to October 2023.</li>
   <li>Mapped country-wise average ratings to identify regional differences in customer experience.</li>
@@ -12,7 +13,7 @@
   <li>Enabled interactive filtering by Traveller Type, Seat Type, Aircraft Group, and Continent for targeted analysis.</li>
   <li>Created calculated fields for dynamic metric switching using <code>CASE</code> logic and validated dependencies.</li>
   <li>Designed for aviation analysts, customer experience teams, and data storytelling around flight satisfaction trends.</li>
-  <li><a href="[https://public.tableau.com/app/profile/your-link-here](https://public.tableau.com/app/profile/vo.ngoc.minh.chau/viz/AirplaneStatsAnalysis/Dashboard12)" target="_blank">View the live dashboard here</a></li>
+  
 </ul>
 
 
