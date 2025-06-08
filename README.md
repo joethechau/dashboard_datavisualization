@@ -12,7 +12,9 @@
   <li>Enabled interactive filtering by Traveller Type, Seat Type, Aircraft Group, and Continent for targeted analysis.</li>
   <li>Created calculated fields for dynamic metric switching using <code>CASE</code> logic and validated dependencies.</li>
   <li>Designed for aviation analysts, customer experience teams, and data storytelling around flight satisfaction trends.</li>
+  <li><a href="[https://public.tableau.com/app/profile/your-link-here](https://public.tableau.com/app/profile/vo.ngoc.minh.chau/viz/AirplaneStatsAnalysis/Dashboard12)" target="_blank">View the live dashboard here</a></li>
 </ul>
+
 
 <h3>Visualization: Vietnam GDP Analysis Dashboard – Power BI</h3>
 
