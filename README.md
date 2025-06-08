@@ -1,5 +1,18 @@
 <h1> My Project </h1>
 
+<h3>Visualization: Vietnam GDP Analysis Dashboard – Power BI</h3>
+
+<p><strong>Designed and built an interactive Power BI dashboard to visualize and analyze Vietnam’s GDP by region and province.</strong></p>
+<ul>
+  <li>Compared GDP and population across provinces and major cities using dynamic bar charts and slicers.</li>
+  <li>Calculated GDP per capita to highlight regional disparities and economic development gaps.</li>
+  <li>Enabled user-driven filtering by region, city, and province for customized exploration.</li>
+  <li>Used DAX measures for GDP per person and custom tooltips for detailed hover insights.</li>
+  <li>Visualized data through map charts, column comparisons, and responsive layout design.</li>
+  <li>Cleaned and structured provincial economic and population data using Power Query.</li>
+  <li>Tailored for analysts and policy stakeholders seeking both macro and local economic views.</li>
+</ul>
+
 <h3>1: SQL queries for Sales Customer Product Analysis - SQL</h3>
 
 <p><strong>Built SQL solutions for customer segmentation and multi-year product analysis.</strong></p>
