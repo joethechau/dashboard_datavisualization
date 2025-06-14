@@ -1,4 +1,4 @@
-<h1> My Project </h1>
+<h1> Dashboard building </h1>
 
 <h3>Visualization: British Airways Review Dashboard – Tableau</h3>
 
